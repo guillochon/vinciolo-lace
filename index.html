@@ -452,7 +452,13 @@ function loadPanel(k) {
   for (let i = 0; i < p.n; i++) for (let j = 0; j < p.n; j++) val[orb[i][j]] = +p.rows[i][j];
   rebuild(); drawEditor(); document.getElementById('panelSel').value = k;
 }
-document.getElementById('nSlider').addEventListener('input', e => { setup(+e.target.value); drawEditor(); document.getElementById('panelSel').value = ''; });
+// a new size gets a new random design; while dragging, queued moves collapse into one redraw
+let sizePending = false;
+document.getElementById('nSlider').addEventListener('input', e => {
+  document.getElementById('nLab').textContent = e.target.value; document.getElementById('panelSel').value = '';
+  if (sizePending) return; sizePending = true;
+  setTimeout(() => { sizePending = false; setup(+document.getElementById('nSlider').value); randomDesign(); }, 0);
+});
 document.getElementById('randBtn').addEventListener('click', randomDesign);
 document.getElementById('kSel').addEventListener('change', e => { K = parseInt(e.target.value); CEX = e.target.value.endsWith('c'); drawEditor(); });
 document.getElementById('clearBtn').addEventListener('click', () => { val.fill(0); rebuild(); drawEditor(); });
