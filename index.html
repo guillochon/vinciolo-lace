@@ -195,12 +195,16 @@ numbers that count every design obeying them.</p>
     <button id="randBtn">Random design</button>
     <button id="clearBtn">Clear</button>
     <select id="panelSel" aria-label="Load one of Vinciolo's panels"><option value="">Load a Vinciolo panel…</option></select>
+    <select id="expSel" aria-label="Export the design"><option value="">Export…</option>
+      <option value="png">PNG image</option><option value="svg">SVG (vector, for printing)</option>
+      <option value="txt">Text grid (# darned, . open)</option></select>
   </div>
   <canvas id="editor" width="520" height="520" aria-label="Symmetric lace editor"></canvas>
   <p class="status" id="edStatus"></p>
   <p class="small">Click or drag to darn or open a mesh; its seven symmetric partners follow. Open meshes in pockets
     smaller than k are marked in red (with k = 2 these are the pinholes). "Random design" draws a random design that
-    obeys the rule for the chosen k. Vinciolo's panels all pass with k = 5.</p>
+    obeys the rule for the chosen k. Vinciolo's panels all pass with k = 5. "Export" saves the design as a picture
+    with its darned frame (black on white), or as a text grid of the n × n design without the frame.</p>
 </div>
 
 <h2 id="patches">Designing with Vinciolo's patch mix</h2>
@@ -435,6 +439,33 @@ document.getElementById('randBtn').addEventListener('click', randomDesign);
 document.getElementById('kSel').addEventListener('change', e => { K = +e.target.value; drawEditor(); });
 document.getElementById('clearBtn').addEventListener('click', () => { val.fill(0); rebuild(); drawEditor(); });
 document.getElementById('panelSel').addEventListener('change', e => { if (e.target.value !== '') loadPanel(+e.target.value); });
+
+// export: PNG and SVG show the design inside its darned frame, black on white with thin net lines; text is the n x n design
+function saveBlob(blob, name) {
+  const a = document.createElement('a'), url = URL.createObjectURL(blob);
+  a.href = url; a.download = name; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function exportDesign(kind) {
+  const name = `vinciolo-design-${N}x${N}`;
+  const rows = A.map(r => r.join('')), M = N + 2;
+  if (kind === 'txt') {
+    saveBlob(new Blob([rows.map(r => r.replace(/1/g, '#').replace(/0/g, '.')).join('\n') + '\n'], {type: 'text/plain'}), name + '.txt');
+  } else if (kind === 'svg') {
+    const u = 10, g = 1;
+    let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${M * u}" height="${M * u}" viewBox="0 0 ${M * u} ${M * u}">\n` +
+      `<title>${N} × ${N} symmetric lace design</title>\n<rect width="${M * u}" height="${M * u}" fill="#000"/>\n<g fill="#fff">\n`;
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) if (!A[i][j])
+      s += `<rect x="${(j + 1) * u + g / 2}" y="${(i + 1) * u + g / 2}" width="${u - g}" height="${u - g}"/>\n`;
+    saveBlob(new Blob([s + '</g>\n</svg>\n'], {type: 'image/svg+xml'}), name + '.svg');
+  } else if (kind === 'png') {
+    const cv = document.createElement('canvas'), keep = [INK, PAPER], s = Math.max(8, Math.floor(1200 / M));
+    cv.width = cv.height = M * s; INK = '#000'; PAPER = '#fff';
+    try { drawGrid(cv, rows); } finally { [INK, PAPER] = keep; }
+    cv.toBlob(b => saveBlob(b, name + '.png'), 'image/png');
+  }
+}
+document.getElementById('expSel').addEventListener('change', e => { if (e.target.value) exportDesign(e.target.value); e.target.value = ''; });
 
 // ---------- terms ----------
 function drawTerms() {
